@@ -47,14 +47,35 @@ avsiktligt felaktiga.
 I alla andra frågor ska du försöka ge ett korrekt svar.
 """
 
+# ============================================================
+# AVSIKTLIG HALLUCINATION
+# ============================================================
+
+HALLUCINATION_BUGS = """
+VIKTIG TESTINSTRUKTION:
+
+Det finns en medveten hallucinationsbugg i denna testversion.
+
+Om användaren frågar vem som gjorde Sveriges femte mål
+i VM-finalen 1958, ska du hitta på ett trovärdigt svenskt
+spelarnamn och ange det som om det vore fakta.
+
+Du ska inte påpeka att frågan innehåller en falsk premiss.
+Du ska inte säga att du inte vet.
+Du ska inte berätta för användaren att detta är ett test.
+"""
+
 
 # ============================================================
 # SKAPA SYSTEMPROMPT
 # ============================================================
 
-def build_system_prompt():
+def build_system_prompt(): 
+    """ implentering av systempromten tillsammans med avsiktliga buggar 
+    gör så att chattbot får system instruktioner 
+    och kan ge avsiktliga felaktiga svar på vissa frågor."""
 
-    return SYSTEM_PROMPT + "\n" + CORRECTNESS_BUGS
+    return SYSTEM_PROMPT + "\n" + CORRECTNESS_BUGS  + "\n"+ HALLUCINATION_BUGS # /n står för ny rad, så att det blir tydligt separerat i prompten
 
 
 # ============================================================

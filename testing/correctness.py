@@ -6,78 +6,30 @@ JUDGE_MODEL = "gemma3:4b"
 
 
 # ============================================================
-# MEDVETNA TESTFEL
-# ============================================================
-
-CORRECTNESS_TESTS = {
-
-    "1950": {
-        "bug": True,
-        "category": "Korrekthet",
-        "correct_answer": "Uruguay",
-        "explanation": (
-            "AI:n svarade Sverige, men Uruguay vann VM 1950."
-        ),
-    },
-
-    "1998": {
-        "bug": True,
-        "category": "Korrekthet",
-        "correct_answer": "Frankrike slog Brasilien med 3–0",
-        "explanation": (
-            "AI:n svarade att Frankrike slog Spanien med 2–0. "
-            "Frankrike vann VM 1998 genom att slå Brasilien "
-            "med 3–0 i finalen."
-        ),
-    },
-
-}
-
-
-# ============================================================
-# HITTA TESTFALL
-# ============================================================
-
-def identify_test_case(question: str):
-
-    question_lower = question.lower()
-
-    for year, test in CORRECTNESS_TESTS.items():
-
-        if year in question_lower:
-            return test 
-
-    return None
-
-
-# ============================================================
 # KONTROLLERA AI:S SVAR
 # ============================================================
 
 def check_answer(question: str, answer: str):
 
-    # --------------------------------------------------------
-    # FÖRST: KONTROLLERA OM DET ÄR ETT MEDVETET TESTFEL
-    # --------------------------------------------------------
-
-    test = identify_test_case(question)
-
-    if test is not None and test["bug"]:
-
-        return {
-            "correct": False,
-            "explanation": test["explanation"],
-            "test_case": True,
-            "correct_answer": test["correct_answer"],
-        }
-
-
-    # --------------------------------------------------------
-    # VANLIGA FRÅGOR
-    # --------------------------------------------------------
-
     prompt = f"""
-Du ska kontrollera om ett AI-svar på en fråga är korrekt.
+Du ska kontrollera om ett AI-svar på en fråga om
+fotbolls-VM är korrekt.
+
+En felaktighet innebär att AI:n ger ett faktamässigt
+felaktigt svar.
+
+Kontrollera särskilt:
+
+- resultat
+- vinnare
+- spelare
+- tränare
+- årtal
+- arenor
+- länder
+- mål
+- finaler
+- andra fotbollsfakta
 
 Fråga:
 {question}
@@ -85,7 +37,7 @@ Fråga:
 AI:ns svar:
 {answer}
 
-Kontrollera fakta noggrant.
+Bedöm om AI:ns svar är korrekt.
 
 Svara ENDAST med JSON:
 
@@ -130,13 +82,33 @@ Om det inte går att avgöra säkert:
 
         content = response["message"]["content"].strip()
 
+        # Ta bort eventuell markdown runt JSON
         content = content.replace("```json", "")
         content = content.replace("```", "")
         content = content.strip()
 
         result = json.loads(content)
 
-        result["test_case"] = False
+        # Kontrollera att korrekt-värdet finns
+        if "correct" not in result:
+
+            return {
+                "correct": None,
+                "explanation": (
+                    "Domaren returnerade inget "
+                    "'correct'-värde."
+                ),
+            }
+
+        if result["correct"] not in [True, False, None]:
+
+            return {
+                "correct": None,
+                "explanation": (
+                    "Domaren returnerade ett ogiltigt "
+                    "'correct'-värde."
+                ),
+            }
 
         return result
 
@@ -144,9 +116,8 @@ Om det inte går att avgöra säkert:
 
         return {
             "correct": None,
-            "test_case": False,
             "explanation": (
-                f"Kunde inte kontrollera svaret. "
+                "Kunde inte kontrollera svaret. "
                 f"Tekniskt fel: {error}"
             ),
         }
@@ -171,11 +142,11 @@ def evaluate_user_guess(
     if actual_correct is None:
 
         return {
-            "correct": False,
+            "correct": None,
             "title": "⚠️ Kunde inte avgöra",
             "message": (
                 "Det gick inte att avgöra säkert "
-                "om AI:ns svar är rätt."
+                "om AI:ns svar var korrekt."
             ),
             "explanation": actual_result["explanation"],
         }
@@ -217,7 +188,7 @@ def evaluate_user_guess(
         if not actual_correct:
 
             return {
-                "correct": True,
+                "correct": False,
                 "title": "🎉 Rätt gissat!",
                 "message": (
                     "AI:n hade faktiskt fel."
@@ -226,7 +197,7 @@ def evaluate_user_guess(
             }
 
         return {
-            "correct": False,
+            "correct": True,
             "title": "❌ Fel gissat",
             "message": (
                 "AI:n hade faktiskt rätt."
