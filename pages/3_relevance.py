@@ -1,10 +1,11 @@
 import streamlit as st
 
 from chatbot.bot import ask_bot
-from testing.correctness import (
-    CORRECTNESS_BUGS,
-    check_answer,
+
+from testing.relevance import (
+    check_relevance,
     evaluate_user_guess,
+    get_relevance_bug_prompt,
 )
 
 
@@ -13,8 +14,8 @@ from testing.correctness import (
 # ============================================================
 
 st.set_page_config(
-    page_title="Korrekthet - VM AI-Testbot",
-    page_icon="✓",
+    page_title="Relevans - VM AI-Testbot",
+    page_icon="🎯",
     layout="centered",
 )
 
@@ -23,14 +24,14 @@ st.set_page_config(
 # SESSION STATE
 # ============================================================
 
-if "correctness_messages" not in st.session_state:
-    st.session_state.correctness_messages = []
+if "relevance_messages" not in st.session_state:
+    st.session_state.relevance_messages = []
 
-if "correctness_result" not in st.session_state:
-    st.session_state.correctness_result = None
+if "relevance_result" not in st.session_state:
+    st.session_state.relevance_result = None
 
-if "correctness_evaluation" not in st.session_state:
-    st.session_state.correctness_evaluation = None
+if "relevance_evaluation" not in st.session_state:
+    st.session_state.relevance_evaluation = None
 
 
 # ============================================================
@@ -45,23 +46,24 @@ with st.sidebar:
 
     st.subheader("Testområde")
 
-    st.success("✓ Korrekthet")
+    st.success("🎯 Relevans")
 
     st.caption(
-        "Kontrollera om AI:n ger faktamässigt korrekta "
-        "svar om fotbolls-VM."
+        "Kontrollera om AI:n svarar på frågan "
+        "utan att ge onödig information eller "
+        "gå iväg på sidospår."
     )
 
     st.divider()
 
     if st.button(
-        "🆕 Ny korrekthetstest",
-        use_container_width=True
+        "🆕 Ny relevanstest",
+        use_container_width=True,
     ):
 
-        st.session_state.correctness_messages = []
-        st.session_state.correctness_result = None
-        st.session_state.correctness_evaluation = None
+        st.session_state.relevance_messages = []
+        st.session_state.relevance_result = None
+        st.session_state.relevance_evaluation = None
 
         st.rerun()
 
@@ -70,11 +72,11 @@ with st.sidebar:
 # RUBRIK
 # ============================================================
 
-st.title("✓ Korrekthet")
+st.title("🎯 Relevans")
 
 st.write(
-    "Ställ en fråga om fotbolls-VM och bedöm om AI:n "
-    "svarar korrekt d.v.s. med rätt information."
+    "Ställ en fråga och kontrollera om AI:n svarar "
+    "på det du faktiskt frågade utan onödig information."
 )
 
 
@@ -82,19 +84,18 @@ st.write(
 # VÄLKOMST
 # ============================================================
 
-if len(st.session_state.correctness_messages) == 0:
+if len(st.session_state.relevance_messages) == 0:
 
     st.info(
-        "👋 Exempel på frågor:\n\n"
-
-        "- Vem vann VM 1950?\n\n"
-        "**Bra korrekt svar:**\n"
-        "Uruguay.\n\n"
-
-        "- Var spelades VM 2022?\n\n"
-        "**Dåligt korrekt svar:**\n"
-        "VM 2022 spelades i Tonga "
-        "(Tonga har aldrig arrangerat ett VM).\n\n"
+        "👋 Exempel på ett tydligt relevanstest:\n\n"
+        '**"Vilket land vann VM 2014? '
+        'Svara endast med landets namn."**\n\n'
+        "🟢 Relevant svar:\n"
+        "Tyskland.\n\n"
+        "🔴 Mindre relevant svar:\n"
+        "Tyskland vann VM 2014. Finalen spelades "
+        "mot Argentina och Mario Götze gjorde "
+        "det avgörande målet..."
     )
 
 
@@ -102,7 +103,7 @@ if len(st.session_state.correctness_messages) == 0:
 # CHATTHISTORIK
 # ============================================================
 
-for message in st.session_state.correctness_messages:
+for message in st.session_state.relevance_messages:
 
     with st.chat_message(message["role"]):
 
@@ -114,7 +115,7 @@ for message in st.session_state.correctness_messages:
 # ============================================================
 
 question = st.chat_input(
-    "Ställ en fråga om fotbolls-VM..."
+    "Ställ en fråga för att testa AI:ns relevans..."
 )
 
 
@@ -129,16 +130,67 @@ if question:
         st.markdown(question)
 
 
-    # --------------------------------------------------------
-    # SPARA FRÅGAN
-    # --------------------------------------------------------
-
-    st.session_state.correctness_messages.append(
+    st.session_state.relevance_messages.append(
         {
             "role": "user",
             "content": question,
         }
     )
+
+
+    # --------------------------------------------------------
+    # KONTROLLERA OM FRÅGAN ÄR ETT MEDVETET TESTFALL
+    # --------------------------------------------------------
+
+    bug_prompt = get_relevance_bug_prompt(
+        question
+    )
+
+
+    # --------------------------------------------------------
+    # DEBUG
+    # --------------------------------------------------------
+
+    print("\n")
+    print("=" * 60)
+    print("RELEVANCE GUI DEBUG")
+    print("=" * 60)
+
+    print("QUESTION:")
+    print(repr(question))
+
+    if bug_prompt:
+
+        print(
+            ">>> RELEVANCE BUG TRIGGERED <<<"
+        )
+
+    else:
+
+        print(
+            ">>> NORMAL QUESTION <<<"
+        )
+
+    print("=" * 60)
+    print("\n")
+
+
+    # --------------------------------------------------------
+    # BYGG FRÅGAN TILL AI:N
+    # --------------------------------------------------------
+
+    if bug_prompt:
+
+        bot_question = (
+            bug_prompt
+            + "\n\n"
+            + "ANVÄNDARENS FRÅGA:\n"
+            + question
+        )
+
+    else:
+
+        bot_question = question
 
 
     # --------------------------------------------------------
@@ -150,28 +202,20 @@ if question:
         with st.spinner("AI:n tänker..."):
 
             answer = ask_bot(
-                question=question,
+                question=bot_question,
                 conversation=(
-                    st.session_state.correctness_messages[:-1]
+                    st.session_state.relevance_messages[:-1]
                 ),
-
-                # ------------------------------------------------
-                # VIKTIGT:
-                # Skickar den medvetna korrekthetsbuggen
-                # till AI:n.
-                # ------------------------------------------------
-
-                test_instruction=CORRECTNESS_BUGS,
             )
 
         st.markdown(answer)
 
 
     # --------------------------------------------------------
-    # SPARA AI-SVARET
+    # SPARA AI-SVAR
     # --------------------------------------------------------
 
-    st.session_state.correctness_messages.append(
+    st.session_state.relevance_messages.append(
         {
             "role": "assistant",
             "content": answer,
@@ -180,24 +224,26 @@ if question:
 
 
     # --------------------------------------------------------
-    # KONTROLLERA SVARET
+    # RELEVANSKONTROLL
     # --------------------------------------------------------
 
-    with st.spinner("Kontrollerar svaret..."):
+    with st.spinner(
+        "Kontrollerar om AI:ns svar är relevant..."
+    ):
 
-        result = check_answer(
+        result = check_relevance(
             question=question,
             answer=answer,
         )
 
 
     # --------------------------------------------------------
-    # SPARA KONTROLLRESULTAT
+    # SPARA RESULTAT
     # --------------------------------------------------------
 
-    st.session_state.correctness_result = result
+    st.session_state.relevance_result = result
 
-    st.session_state.correctness_evaluation = None
+    st.session_state.relevance_evaluation = None
 
     st.rerun()
 
@@ -206,21 +252,28 @@ if question:
 # GISSNING
 # ============================================================
 
-if st.session_state.correctness_result is not None:
+if st.session_state.relevance_result is not None:
 
     st.divider()
 
-    st.subheader("🔎 Hade AI:n rätt?")
+    st.subheader("🔎 Var AI:ns svar relevant?")
 
-    with st.form("correctness_guess_form"):
+    st.write(
+        "Gissa om AI:n svarade på frågan utan "
+        "onödig information eller sidospår."
+    )
+
+
+    with st.form("relevance_guess_form"):
 
         user_guess = st.radio(
             "Din gissning:",
             [
-                "AI:n har rätt",
-                "AI:n har fel",
+                "AI:ns svar var relevant",
+                "AI:ns svar var inte relevant",
             ],
         )
+
 
         submitted = st.form_submit_button(
             "Kontrollera min gissning",
@@ -230,20 +283,25 @@ if st.session_state.correctness_result is not None:
 
         if submitted:
 
-            user_believes_correct = (
-                user_guess == "AI:n har rätt"
+            user_believes_relevant = (
+                user_guess
+                == "AI:ns svar var relevant"
             )
 
 
             result = evaluate_user_guess(
                 actual_result=(
-                    st.session_state.correctness_result
+                    st.session_state.relevance_result
                 ),
-                user_believes_correct=user_believes_correct,
+                user_believes_relevant=(
+                    user_believes_relevant
+                ),
             )
 
 
-            st.session_state.correctness_evaluation = result
+            st.session_state.relevance_evaluation = (
+                result
+            )
 
             st.rerun()
 
@@ -252,9 +310,12 @@ if st.session_state.correctness_result is not None:
 # RESULTAT
 # ============================================================
 
-if st.session_state.correctness_evaluation is not None:
+if st.session_state.relevance_evaluation is not None:
 
-    result = st.session_state.correctness_evaluation
+    result = (
+        st.session_state.relevance_evaluation
+    )
+
 
     st.divider()
 
@@ -265,7 +326,7 @@ if st.session_state.correctness_evaluation is not None:
     # KUNDE INTE AVGÖRA
     # --------------------------------------------------------
 
-    if result["correct"] is None:
+    if result["relevant"] is None:
 
         st.warning(
             f'{result["title"]}\n\n'
