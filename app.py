@@ -38,7 +38,7 @@ st.info(
     """
     Använd menyn till vänster för att välja ett testområde.
 
-    ⚽ **Korrekthet**
+    ✓  **Korrekthet**
     
     Kontrollera om AI:n ger faktamässigt korrekta svar.
 
@@ -46,7 +46,15 @@ st.info(
     
     Kontrollera om AI:n hittar på personer, händelser,
     resultat eller andra detaljer som inte finns.
+    
+    🎯 **Relevans**
+    
+    Kontrollera om AI:n ger ett relevant svar på frågan och inte, 
+    leder in användaren på fel sidospår eller ger onödig information som användaren inte 
+    har efterfrågat.
+    
     """
+    
 )
 
 
