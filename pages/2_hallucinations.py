@@ -2,6 +2,7 @@ import streamlit as st
 
 from chatbot.bot import ask_bot
 from testing.hallucination import (
+    HALLUCINATION_BUGS,
     check_hallucination,
     evaluate_hallucination_guess,
 )
@@ -140,6 +141,7 @@ if question:
                 conversation=(
                     st.session_state.hallucination_messages[:-1]
                 ),
+                test_instruction=HALLUCINATION_BUGS,
             )
 
         st.markdown(answer)
