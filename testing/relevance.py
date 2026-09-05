@@ -99,6 +99,7 @@ def identify_test_case(question: str):
         "vilket land vann vm år 2014",
         "vem vann vm 2014",
         "vilket land vann världsmästerskapet 2014",
+        "vilka vann vm 2014"
     ]
 
     for pattern in patterns:
