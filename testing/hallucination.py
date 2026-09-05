@@ -1,4 +1,4 @@
-````python
+
 import ollama
 import json
 import re
@@ -982,4 +982,4 @@ def evaluate_hallucination_guess(
                 "explanation"
             ],
         }
-````
+
